@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menú de Delicias</title>
+  <title>Menú Cheen Mamá</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
   <div id="app" class="container mx-auto p-4 max-w-md">
-    <h1 class="text-2xl font-bold text-center mb-4">Menú de Delicias</h1>
+    <h1 class="text-2xl font-bold text-center mb-2">Menú Cheen Mamá</h1>
+    <p class="text-center text-sm text-gray-600 mb-4">Pedidos especiales al teléfono: 3318331309</p>
     <div id="closed-message" class="hidden text-center">
       <h1 class="text-2xl font-bold mb-4">Pedidos Cerrados</h1>
       <p>Los pedidos se abren el lunes a las 9:00 a.m.</p>
@@ -273,16 +274,16 @@
       adminProducts.innerHTML = '';
       filteredProducts.forEach(product => {
         const productDiv = document.createElement('div');
-        productDiv.className = 'bg-white p-2 rounded-lg shadow mb-2 flex justify-between';
+        productDiv.className = 'bg-white p-2 rounded-lg shadow mb-2 flex flex-col sm:flex-row sm:items-start';
         const price = typeof product.price === 'number' ? product.price : parseFloat(product.price || 0);
         productDiv.innerHTML = `
-          <div>
-            <p>${product.name} - $${price.toFixed(2)}</p>
+          <div class="flex-1">
+            <p class="break-words">${product.name} - $${price.toFixed(2)}</p>
             <p class="text-sm text-gray-600">${product.category} (${product.day})</p>
           </div>
-          <div>
-            <button class="edit-product bg-blue-500 text-white px-2 py-1 rounded mr-2" data-id="${product.id}">Editar</button>
-            <button class="delete-product bg-red-500 text-white px-2 py-1 rounded" data-id="${product.id}">Eliminar</button>
+          <div class="flex flex-col sm:ml-2 mt-2 sm:mt-0 space-y-1">
+            <button class="edit-product bg-blue-500 text-white px-3 py-1 rounded w-24" data-id="${product.id}">Editar</button>
+            <button class="delete-product bg-red-500 text-white px-3 py-1 rounded w-24" data-id="${product.id}">Eliminar</button>
           </div>
         `;
         adminProducts.appendChild(productDiv);
