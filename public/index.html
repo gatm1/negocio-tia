@@ -94,7 +94,7 @@
       <p class="text-xl font-bold mt-4">Total: $<span id="cart-total">0.00</span></p>
       <div class="mt-4">
         <input type="text" id="customer-name" placeholder="Nombre" class="w-full p-2 mb-2 border rounded">
-        <input type="text" id="customer-address" placeholder="Día del pedido (Jueves o Viernes)" class="w-full p-2 mb-2 border rounded">
+        <input type="text" id="customer-address" placeholder="Día del pedido" class="w-full p-2 mb-2 border rounded">
         <textarea id="customer-details" placeholder="Detalles adicionales (ej. Sin cebolla)" class="w-full p-2 mb-2 border rounded" rows="3"></textarea>
         <button id="send-order-btn" class="w-full bg-green-500 text-white p-2 rounded">Enviar por WhatsApp</button>
       </div>
@@ -215,9 +215,11 @@
         const data = await res.json();
         activeMenuDay = data.day;
         menuDayTitle.textContent = `Menú para el ${activeMenuDay}`;
+        customerAddress.value = activeMenuDay; // Establecer el día del pedido por defecto
       } catch (err) {
         console.error('Error fetching menu day:', err);
         menuDayTitle.textContent = 'Menú para el Jueves'; // Valor por defecto en caso de error
+        customerAddress.value = 'Jueves'; // Valor por defecto en caso de error
       }
     }
 
@@ -281,6 +283,7 @@
         if (response.ok) {
           activeMenuDay = day;
           menuDayTitle.textContent = `Menú para el ${activeMenuDay}`;
+          customerAddress.value = activeMenuDay; // Actualizar el día del pedido
           alert(result.message);
           fetchProducts(); // Recargar productos para reflejar el cambio
         } else {
@@ -421,7 +424,10 @@
         total += price * item.quantity;
       });
       cartTotal.textContent = total.toFixed(2);
-      toggleCartBtn.textContent = `Carrito (${cart.length})`;
+      toggleCartBtn.textContent = cartSection.classList.contains('hidden') ? `Carrito (${cart.length})` : 'Menú';
+      // Cambiar color del botón según si hay productos
+      toggleCartBtn.classList.remove('bg-blue-500', 'bg-green-500');
+      toggleCartBtn.classList.add(cart.length > 0 ? 'bg-green-500' : 'bg-blue-500');
 
       // Añadir eventos a los botones del carrito
       document.querySelectorAll('.increment').forEach(button => {
@@ -483,7 +489,7 @@
       window.open(whatsappUrl, '_blank');
       cart = [];
       customerName.value = '';
-      customerAddress.value = '';
+      customerAddress.value = activeMenuDay; // Restablecer al valor por defecto
       customerDetails.value = '';
       cartSection.classList.add('hidden');
       renderCart();
@@ -494,6 +500,7 @@
       cartSection.classList.toggle('hidden');
       menuSection.classList.toggle('hidden');
       toggleCartBtn.textContent = cartSection.classList.contains('hidden') ? `Carrito (${cart.length})` : 'Menú';
+      renderCart(); // Asegurarse de que el color del botón se actualice
     });
 
     // Mostrar formulario de admin desde el menú
