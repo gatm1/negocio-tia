@@ -92,7 +92,7 @@
           `${item.quantity}x ${item.name} - $${(item.price * item.quantity).toFixed(2)}`
         ).join('\n');
         const message = `Nuevo pedido de ${name}\nDirección: ${address}\n\n${orderDetails}\n\nTotal: $${total.toFixed(2)}`;
-        const whatsappUrl = `https://wa.me/+523318331309?text=${encodeURIComponent(message)}`; // Cambia por el número de tu tía
+        const whatsappUrl = `https://wa.me/+521234567890?text=${encodeURIComponent(message)}`; // Cambia por el número de tu tía
         window.open(whatsappUrl, '_blank');
         setCart([]);
         setName('');
@@ -102,7 +102,7 @@
 
       // Iniciar sesión como admin
       const login = () => {
-        if (password === 'zirus123') { // Cambia esta contraseña
+        if (password === 'admin123') { // Cambia esta contraseña
           setIsAdmin(true);
         } else {
           alert('Contraseña incorrecta');
