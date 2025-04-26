@@ -76,6 +76,30 @@ app.post('/api/products', async (req, res) => {
   }
 });
 
+// Actualizar producto
+app.put('/api/products/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, description, price, category, day } = req.body;
+  console.log('Datos recibidos en PUT /api/products:', req.body);
+  try {
+    if (!name || !price || !category || !day) {
+      throw new Error('Faltan campos requeridos: name, price, category y day son obligatorios');
+    }
+    const result = await pool.query(
+      'UPDATE products SET name = $1, description = $2, price = $3, category = $4, day = $5 WHERE id = $6 RETURNING *',
+      [name, description, price, category, day, id]
+    );
+    console.log('Producto actualizado:', result.rows[0]);
+    if (!result.rows[0]) {
+      throw new Error('No se encontró el producto para actualizar');
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error en PUT /api/products:', err.message);
+    res.status(500).send('Error en el servidor: ' + err.message);
+  }
+});
+
 // Eliminar producto
 app.delete('/api/products/:id', async (req, res) => {
   const { id } = req.params;
