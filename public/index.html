@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -47,6 +48,26 @@
         </select>
         <button id="add-product-btn" class="w-full bg-green-500 text-white p-2 rounded">Agregar</button>
       </div>
+      <div id="edit-form" class="hidden bg-white p-4 rounded-lg shadow mb-4">
+        <h2 class="text-xl font-semibold mb-2">Editar Producto</h2>
+        <input type="hidden" id="edit-id">
+        <input type="text" id="edit-name" placeholder="Nombre" class="w-full p-2 mb-2 border rounded">
+        <input type="text" id="edit-description" placeholder="Descripción" class="w-full p-2 mb-2 border rounded">
+        <input type="number" id="edit-price" placeholder="Precio" class="w-full p-2 mb-2 border rounded">
+        <select id="edit-category" class="w-full p-2 mb-2 border rounded">
+          <option value="">Selecciona categoría</option>
+          <option value="Platillos">Platillos</option>
+          <option value="Bebidas">Bebidas</option>
+          <option value="Postres">Postres</option>
+        </select>
+        <select id="edit-day" class="w-full p-2 mb-2 border rounded">
+          <option value="">Selecciona día</option>
+          <option value="Jueves">Jueves</option>
+          <option value="Viernes">Viernes</option>
+        </select>
+        <button id="update-product-btn" class="w-full bg-blue-500 text-white p-2 rounded">Guardar Cambios</button>
+        <button id="cancel-edit-btn" class="w-full bg-gray-500 text-white p-2 rounded mt-2">Cancelar</button>
+      </div>
       <h2 class="text-xl font-semibold mb-2">Productos</h2>
       <div id="admin-products"></div>
     </div>
@@ -95,6 +116,15 @@
     const newCategory = document.getElementById('new-category');
     const newDay = document.getElementById('new-day');
     const addProductBtn = document.getElementById('add-product-btn');
+    const editForm = document.getElementById('edit-form');
+    const editId = document.getElementById('edit-id');
+    const editName = document.getElementById('edit-name');
+    const editDescription = document.getElementById('edit-description');
+    const editPrice = document.getElementById('edit-price');
+    const editCategory = document.getElementById('edit-category');
+    const editDay = document.getElementById('edit-day');
+    const updateProductBtn = document.getElementById('update-product-btn');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const cartSection = document.getElementById('cart-section');
     const cartItemsDiv = document.getElementById('cart-items');
     const cartTotal = document.getElementById('cart-total');
@@ -221,9 +251,21 @@
             <p>${product.name} - $${price.toFixed(2)}</p>
             <p class="text-sm text-gray-600">${product.category} (${product.day})</p>
           </div>
-          <button class="delete-product bg-red-500 text-white px-2 py-1 rounded" data-id="${product.id}">Eliminar</button>
+          <div>
+            <button class="edit-product bg-blue-500 text-white px-2 py-1 rounded mr-2" data-id="${product.id}">Editar</button>
+            <button class="delete-product bg-red-500 text-white px-2 py-1 rounded" data-id="${product.id}">Eliminar</button>
+          </div>
         `;
         adminProducts.appendChild(productDiv);
+      });
+
+      // Añadir eventos a los botones "Editar"
+      document.querySelectorAll('.edit-product').forEach(button => {
+        button.addEventListener('click', () => {
+          const productId = parseInt(button.getAttribute('data-id'));
+          const product = products.find(p => p.id === productId);
+          editProduct(product);
+        });
       });
 
       // Añadir eventos a los botones "Eliminar"
@@ -233,6 +275,18 @@
           await deleteProduct(productId);
         });
       });
+    }
+
+    // Mostrar formulario de edición
+    function editProduct(product) {
+      editId.value = product.id;
+      editName.value = product.name;
+      editDescription.value = product.description || '';
+      editPrice.value = product.price;
+      editCategory.value = product.category;
+      editDay.value = product.day;
+      editForm.classList.remove('hidden');
+      window.scrollTo({ top: editForm.offsetTop, behavior: 'smooth' });
     }
 
     // Agregar al carrito
@@ -374,6 +428,7 @@
     // Cerrar sesión
     adminLogout.addEventListener('click', () => {
       isAdmin = false;
+      editForm.classList.add('hidden');
       updateVisibility();
       fetchProducts(); // Volver a cargar los productos del día actual
     });
@@ -416,6 +471,49 @@
         console.error('Error en el cliente:', err);
         alert('Error en el servidor: ' + err.message);
       }
+    });
+
+    // Actualizar producto
+    updateProductBtn.addEventListener('click', async () => {
+      const id = parseInt(editId.value);
+      const name = editName.value.trim();
+      const description = editDescription.value.trim();
+      const price = parseFloat(editPrice.value);
+      const category = editCategory.value;
+      const day = editDay.value;
+      if (!name || !price || !category || !day) {
+        alert('Por favor, completa todos los campos.');
+        return;
+      }
+      try {
+        const response = await fetch(`/api/products/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description, price, category, day })
+        });
+        const responseBody = await response.text();
+        console.log('Respuesta del servidor:', responseBody);
+        if (response.ok) {
+          const updatedProduct = JSON.parse(responseBody);
+          updatedProduct.price = parseFloat(updatedProduct.price);
+          const index = products.findIndex(p => p.id === id);
+          products[index] = updatedProduct;
+          renderMenu();
+          renderAdminProducts();
+          editForm.classList.add('hidden');
+          alert('Producto actualizado con éxito');
+        } else {
+          alert('Error al actualizar producto: ' + responseBody);
+        }
+      } catch (err) {
+        console.error('Error en el cliente:', err);
+        alert('Error en el servidor: ' + err.message);
+      }
+    });
+
+    // Cancelar edición
+    cancelEditBtn.addEventListener('click', () => {
+      editForm.classList.add('hidden');
     });
 
     // Eliminar producto
