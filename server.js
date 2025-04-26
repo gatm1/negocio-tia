@@ -17,6 +17,7 @@ app.use(express.static('public'));
 // Obtener productos según el día actual
 app.get('/api/products', async (req, res) => {
   try {
+    /*
     const now = new Date();
     const day = now.getDay(); // 0=Domingo, 1=Lunes, ..., 4=Jueves, 5=Viernes
     let dayFilter;
@@ -33,6 +34,8 @@ app.get('/api/products', async (req, res) => {
       'SELECT * FROM products WHERE day = $1 ORDER BY category, name',
       [dayFilter]
     );
+
+    */
     console.log('Productos obtenidos:', result.rows);
     res.json(result.rows);
   } catch (err) {
