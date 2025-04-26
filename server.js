@@ -36,6 +36,9 @@ app.get('/api/products', async (req, res) => {
     );
 
     */
+    // Devolver todos los productos sin importar el día - Eliminar despues de depurar esta linea
+    const result = await pool.query('SELECT * FROM products ORDER BY category, name'); 
+    
     console.log('Productos obtenidos:', result.rows);
     res.json(result.rows);
   } catch (err) {
