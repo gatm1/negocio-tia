@@ -20,6 +20,7 @@
       </div>
     </div>
     <div id="menu-section">
+      <h2 id="menu-day-title" class="text-xl font-semibold text-center mb-4">Menú para el Jueves</h2>
       <div id="menu"></div>
       <button id="admin-btn" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded w-full">Administrar Menú</button>
       <div id="admin-form" class="hidden mt-4">
@@ -30,6 +31,14 @@
     <div id="admin-section" class="hidden">
       <h1 class="text-2xl font-bold text-center mb-4">Administrar Menú</h1>
       <button id="admin-logout" class="mb-4 bg-red-500 text-white px-4 py-2 rounded">Cerrar sesión</button>
+      <div class="mb-4">
+        <label for="active-menu-day" class="block text-sm font-medium text-gray-700">Menú activo para:</label>
+        <select id="active-menu-day" class="w-full p-2 border rounded">
+          <option value="Jueves">Jueves</option>
+          <option value="Viernes">Viernes</option>
+        </select>
+        <button id="set-menu-day-btn" class="mt-2 w-full bg-purple-500 text-white p-2 rounded">Establecer Día Activo</button>
+      </div>
       <div class="mb-4">
         <label for="filter-day" class="block text-sm font-medium text-gray-700">Filtrar por día:</label>
         <select id="filter-day" class="w-full p-2 border rounded">
@@ -85,7 +94,7 @@
       <p class="text-xl font-bold mt-4">Total: $<span id="cart-total">0.00</span></p>
       <div class="mt-4">
         <input type="text" id="customer-name" placeholder="Nombre" class="w-full p-2 mb-2 border rounded">
-        <input type="text" id="customer-address" placeholder="Dirección" class="w-full p-2 mb-2 border rounded">
+        <input type="text" id="customer-address" placeholder="Día del pedido (Jueves o Viernes)" class="w-full p-2 mb-2 border rounded">
         <textarea id="customer-details" placeholder="Detalles adicionales (ej. Sin cebolla)" class="w-full p-2 mb-2 border rounded" rows="3"></textarea>
         <button id="send-order-btn" class="w-full bg-green-500 text-white p-2 rounded">Enviar por WhatsApp</button>
       </div>
@@ -104,13 +113,15 @@
     let filteredProducts = [];
     let cart = [];
     let isAdmin = false;
+    let activeMenuDay = 'Jueves'; // Valor inicial
     const adminPassword = 'admin123'; // CAMBIA ESTA CONTRASEÑA
-    const whatsappNumber = '+523318331309'; // CAMBIA ESTE NÚMERO
+    const whatsappNumber = '+521234567890'; // CAMBIA ESTE NÚMERO
 
     // Elementos del DOM
     const app = document.getElementById('app');
     const closedMessage = document.getElementById('closed-message');
     const menuSection = document.getElementById('menu-section');
+    const menuDayTitle = document.getElementById('menu-day-title');
     const menuDiv = document.getElementById('menu');
     const adminSection = document.getElementById('admin-section');
     const adminBtn = document.getElementById('admin-btn');
@@ -124,6 +135,8 @@
     const adminLogout = document.getElementById('admin-logout');
     const adminProducts = document.getElementById('admin-products');
     const filterDay = document.getElementById('filter-day');
+    const activeMenuDaySelect = document.getElementById('active-menu-day');
+    const setMenuDayBtn = document.getElementById('set-menu-day-btn');
     const newName = document.getElementById('new-name');
     const newDescription = document.getElementById('new-description');
     const newPrice = document.getElementById('new-price');
@@ -195,12 +208,25 @@
       }
     }
 
+    // Obtener el día activo del menú
+    async function fetchMenuDay() {
+      try {
+        const res = await fetch('/api/get-menu-day');
+        const data = await res.json();
+        activeMenuDay = data.day;
+        menuDayTitle.textContent = `Menú para el ${activeMenuDay}`;
+      } catch (err) {
+        console.error('Error fetching menu day:', err);
+        menuDayTitle.textContent = 'Menú para el Jueves'; // Valor por defecto en caso de error
+      }
+    }
+
     // Obtener productos
     async function fetchProducts() {
       try {
         const res = await fetch('/api/products');
         products = await res.json();
-        console.log('Productos recibidos en fetchProducts:', products); // Añadir log para depuración
+        console.log('Productos recibidos en fetchProducts:', products);
         // Convertir price a número
         products = products.map(product => ({
           ...product,
@@ -240,6 +266,30 @@
         filteredProducts = products;
       }
       renderAdminProducts();
+    }
+
+    // Establecer el día activo del menú
+    async function setMenuDay() {
+      const day = activeMenuDaySelect.value;
+      try {
+        const response = await fetch('/api/set-menu-day', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ day })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          activeMenuDay = day;
+          menuDayTitle.textContent = `Menú para el ${activeMenuDay}`;
+          alert(result.message);
+          fetchProducts(); // Recargar productos para reflejar el cambio
+        } else {
+          alert('Error al establecer el día activo: ' + result.message);
+        }
+      } catch (err) {
+        console.error('Error al establecer el día activo:', err);
+        alert('Error en el servidor: ' + err.message);
+      }
     }
 
     // Renderizar el menú
@@ -407,10 +457,14 @@
     // Enviar pedido por WhatsApp
     sendOrderBtn.addEventListener('click', () => {
       const name = customerName.value.trim();
-      const address = customerAddress.value.trim();
+      const orderDay = customerAddress.value.trim();
       const details = customerDetails.value.trim();
-      if (!name || !address || cart.length === 0) {
-        alert('Por favor, completa el nombre, dirección y agrega productos al carrito.');
+      if (!name || !orderDay || cart.length === 0) {
+        alert('Por favor, completa el nombre, día del pedido y agrega productos al carrito.');
+        return;
+      }
+      if (orderDay !== 'Jueves' && orderDay !== 'Viernes') {
+        alert('El día del pedido debe ser "Jueves" o "Viernes".');
         return;
       }
       const orderDetails = cart.map(item => {
@@ -421,7 +475,7 @@
         const price = typeof item.price === 'number' ? item.price : parseFloat(item.price || 0);
         return sum + price * item.quantity;
       }, 0);
-      let message = `Nuevo pedido de ${name}\nDirección: ${address}\n\n${orderDetails}\n\nTotal: $${total.toFixed(2)}`;
+      let message = `Nuevo pedido de ${name}\nDía del pedido: ${orderDay}\n\n${orderDetails}\n\nTotal: $${total.toFixed(2)}`;
       if (details) {
         message += `\n\nDetalles adicionales: ${details}`;
       }
@@ -482,7 +536,11 @@
       editForm.classList.add('hidden');
       updateVisibility();
       fetchProducts(); // Volver a cargar los productos del día actual
+      fetchMenuDay(); // Actualizar el día del menú al cerrar sesión
     });
+
+    // Establecer el día activo al hacer clic en el botón
+    setMenuDayBtn.addEventListener('click', setMenuDay);
 
     // Filtrar productos al cambiar el día
     filterDay.addEventListener('change', filterProductsByDay);
@@ -592,6 +650,7 @@
     }
 
     // Inicializar
+    fetchMenuDay(); // Obtener el día activo al cargar la página
     fetchProducts();
     updateVisibility();
     setInterval(updateVisibility, 60000); // Verifica cada minuto
