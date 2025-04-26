@@ -1,44 +1,28 @@
 const express = require('express');
-const path = require('path');
 const { Pool } = require('pg');
+const path = require('path');
 const app = express();
-const port = process.env.PORT || 3000;
 
-// Configuración de PostgreSQL
+// Variable para almacenar el día activo del menú (por defecto Jueves)
+let activeMenuDay = 'Jueves';
+
+// Configuración de la base de datos
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-// Middleware
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Obtener productos según el día actual
+// Obtener productos (usar el día activo seleccionado por el admin)
 app.get('/api/products', async (req, res) => {
   try {
-    /*
-    const now = new Date();
-    const day = now.getDay(); // 0=Domingo, 1=Lunes, ..., 4=Jueves, 5=Viernes
-    let dayFilter;
-    if (day === 4) {
-      dayFilter = 'Jueves';
-    } else if (day === 5) {
-      dayFilter = 'Viernes';
-    } else {
-      // Si no es jueves ni viernes, devolvemos un array vacío (pedidos cerrados)
-      res.json([]);
-      return;
-    }
+    // Usar el día activo seleccionado por el admin
     const result = await pool.query(
       'SELECT * FROM products WHERE day = $1 ORDER BY category, name',
-      [dayFilter]
+      [activeMenuDay]
     );
-
-    */
-    // Devolver todos los productos sin importar el día - Eliminar despues de depurar esta linea
-    const result = await pool.query('SELECT * FROM products ORDER BY category, name'); 
-    
     console.log('Productos obtenidos:', result.rows);
     res.json(result.rows);
   } catch (err) {
@@ -47,10 +31,10 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// Obtener todos los productos (para la sección de admin)
+// Obtener todos los productos (para admin)
 app.get('/api/products/all', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM products ORDER BY day, category, name');
+    const result = await pool.query('SELECT * FROM products ORDER BY category, name');
     console.log('Todos los productos obtenidos:', result.rows);
     res.json(result.rows);
   } catch (err) {
@@ -62,20 +46,15 @@ app.get('/api/products/all', async (req, res) => {
 // Agregar producto
 app.post('/api/products', async (req, res) => {
   const { name, description, price, category, day } = req.body;
-  console.log('Datos recibidos en POST /api/products:', req.body);
+  if (!name || !price || !category || !day) {
+    return res.status(400).send('Faltan campos requeridos');
+  }
   try {
-    if (!name || !price || !category || !day) {
-      throw new Error('Faltan campos requeridos: name, price, category y day son obligatorios');
-    }
     const result = await pool.query(
       'INSERT INTO products (name, description, price, category, day) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [name, description, price, category, day]
+      [name, description || '', price, category, day]
     );
-    console.log('Producto insertado:', result.rows[0]);
-    if (!result.rows[0]) {
-      throw new Error('No se recibió el producto insertado en la respuesta');
-    }
-    res.status(201).json(result.rows[0]);
+    res.json(result.rows[0]);
   } catch (err) {
     console.error('Error en POST /api/products:', err.message);
     res.status(500).send('Error en el servidor: ' + err.message);
@@ -86,22 +65,20 @@ app.post('/api/products', async (req, res) => {
 app.put('/api/products/:id', async (req, res) => {
   const { id } = req.params;
   const { name, description, price, category, day } = req.body;
-  console.log('Datos recibidos en PUT /api/products:', req.body);
+  if (!name || !price || !category || !day) {
+    return res.status(400).send('Faltan campos requeridos');
+  }
   try {
-    if (!name || !price || !category || !day) {
-      throw new Error('Faltan campos requeridos: name, price, category y day son obligatorios');
-    }
     const result = await pool.query(
       'UPDATE products SET name = $1, description = $2, price = $3, category = $4, day = $5 WHERE id = $6 RETURNING *',
-      [name, description, price, category, day, id]
+      [name, description || '', price, category, day, id]
     );
-    console.log('Producto actualizado:', result.rows[0]);
-    if (!result.rows[0]) {
-      throw new Error('No se encontró el producto para actualizar');
+    if (result.rows.length === 0) {
+      return res.status(404).send('Producto no encontrado');
     }
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('Error en PUT /api/products:', err.message);
+    console.error('Error en PUT /api/products/:id:', err.message);
     res.status(500).send('Error en el servidor: ' + err.message);
   }
 });
@@ -110,21 +87,35 @@ app.put('/api/products/:id', async (req, res) => {
 app.delete('/api/products/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
-    console.log('Producto eliminado, filas afectadas:', result.rowCount);
-    res.sendStatus(200);
+    const result = await pool.query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).send('Producto no encontrado');
+    }
+    res.json({ message: 'Producto eliminado' });
   } catch (err) {
-    console.error('Error en DELETE /api/products:', err.message);
+    console.error('Error en DELETE /api/products/:id:', err.message);
     res.status(500).send('Error en el servidor: ' + err.message);
   }
 });
 
-// Servir index.html en la ruta raíz
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Establecer el día activo del menú
+app.post('/api/set-menu-day', (req, res) => {
+  const { day } = req.body;
+  if (day !== 'Jueves' && day !== 'Viernes') {
+    return res.status(400).send('Día inválido. Debe ser "Jueves" o "Viernes".');
+  }
+  activeMenuDay = day;
+  console.log(`Día activo del menú cambiado a: ${activeMenuDay}`);
+  res.json({ message: `Menú activo cambiado a ${day}` });
 });
 
-// Iniciar servidor
-app.listen(port, () => {
-  console.log(`Servidor corriendo en el puerto ${port}`);
+// Obtener el día activo del menú
+app.get('/api/get-menu-day', (req, res) => {
+  res.json({ day: activeMenuDay });
+});
+
+// Iniciar el servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
