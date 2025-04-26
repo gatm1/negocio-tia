@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const { Pool } = require('pg');
 const app = express();
@@ -49,6 +50,10 @@ app.delete('/api/products/:id', async (req, res) => {
     console.error(err);
     res.status(500).send('Error en el servidor');
   }
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Iniciar servidor
