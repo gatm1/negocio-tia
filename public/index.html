@@ -338,39 +338,42 @@
       updateVisibility();
     });
 
-    // Agregar producto
-    addProductBtn.addEventListener('click', async () => {
-      const name = newName.value.trim();
-      const description = newDescription.value.trim();
-      const price = parseFloat(newPrice.value);
-      const category = newCategory.value;
-      if (!name || !price || !category) {
-        alert('Por favor, completa todos los campos.');
-        return;
-      }
-      try {
-        const response = await fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, price, category })
-        });
-        if (response.ok) {
-          const addedProduct = await response.json();
-          products.push(addedProduct);
-          renderMenu();
-          renderAdminProducts();
-          newName.value = '';
-          newDescription.value = '';
-          newPrice.value = '';
-          newCategory.value = '';
-        } else {
-          alert('Error al agregar producto');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Error en el servidor');
-      }
+   // Agregar producto
+addProductBtn.addEventListener('click', async () => {
+  const name = newName.value.trim();
+  const description = newDescription.value.trim();
+  const price = parseFloat(newPrice.value);
+  const category = newCategory.value;
+  if (!name || !price || !category) {
+    alert('Por favor, completa todos los campos.');
+    return;
+  }
+  try {
+    const response = await fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description, price, category })
     });
+    const responseBody = await response.text();
+    console.log('Respuesta del servidor:', responseBody);
+    if (response.ok) {
+      const addedProduct = JSON.parse(responseBody);
+      products.push(addedProduct);
+      renderMenu();
+      renderAdminProducts();
+      newName.value = '';
+      newDescription.value = '';
+      newPrice.value = '';
+      newCategory.value = '';
+      alert('Producto agregado con éxito');
+    } else {
+      alert('Error al agregar producto: ' + responseBody);
+    }
+  } catch (err) {
+    console.error('Error en el cliente:', err);
+    alert('Error en el servidor: ' + err.message);
+  }
+});
 
     // Eliminar producto
     async function deleteProduct(id) {
