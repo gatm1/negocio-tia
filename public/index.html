@@ -40,6 +40,11 @@
           <option value="Bebidas">Bebidas</option>
           <option value="Postres">Postres</option>
         </select>
+        <select id="new-day" class="w-full p-2 mb-2 border rounded">
+          <option value="">Selecciona día</option>
+          <option value="Jueves">Jueves</option>
+          <option value="Viernes">Viernes</option>
+        </select>
         <button id="add-product-btn" class="w-full bg-green-500 text-white p-2 rounded">Agregar</button>
       </div>
       <h2 class="text-xl font-semibold mb-2">Productos</h2>
@@ -88,6 +93,7 @@
     const newDescription = document.getElementById('new-description');
     const newPrice = document.getElementById('new-price');
     const newCategory = document.getElementById('new-category');
+    const newDay = document.getElementById('new-day');
     const addProductBtn = document.getElementById('add-product-btn');
     const cartSection = document.getElementById('cart-section');
     const cartItemsDiv = document.getElementById('cart-items');
@@ -100,7 +106,7 @@
     // Verificar si los pedidos están cerrados
     function checkClosed() {
       const now = new Date();
-      const day = now.getDay(); // 0=Domingo, 1=Lunes, ..., 4=Jueves
+      const day = now.getDay(); // 0=Domingo, 1=Lunes, ..., 4=Jueves, 5=Viernes
       const hours = now.getHours();
       const minutes = now.getMinutes();
       // Cierra pedidos el jueves a las 10:00 a.m.
@@ -146,10 +152,26 @@
           price: parseFloat(product.price)
         }));
         renderMenu();
-        renderAdminProducts();
       } catch (err) {
         console.error('Error fetching products:', err);
         menuDiv.innerHTML = '<p>Error al cargar el menú.</p>';
+      }
+    }
+
+    // Obtener todos los productos para la sección de admin
+    async function fetchAllProducts() {
+      try {
+        const res = await fetch('/api/products/all');
+        products = await res.json();
+        // Convertir price a número
+        products = products.map(product => ({
+          ...product,
+          price: parseFloat(product.price)
+        }));
+        renderAdminProducts();
+      } catch (err) {
+        console.error('Error fetching all products:', err);
+        adminProducts.innerHTML = '<p>Error al cargar los productos.</p>';
       }
     }
 
@@ -197,7 +219,7 @@
         productDiv.innerHTML = `
           <div>
             <p>${product.name} - $${price.toFixed(2)}</p>
-            <p class="text-sm text-gray-600">${product.category}</p>
+            <p class="text-sm text-gray-600">${product.category} (${product.day})</p>
           </div>
           <button class="delete-product bg-red-500 text-white px-2 py-1 rounded" data-id="${product.id}">Eliminar</button>
         `;
@@ -331,6 +353,7 @@
         isAdmin = true;
         updateVisibility();
         adminForm.classList.add('hidden');
+        fetchAllProducts(); // Cargar todos los productos para admin
       } else {
         alert('Contraseña incorrecta');
       }
@@ -342,6 +365,7 @@
         isAdmin = true;
         updateVisibility();
         adminLoginForm.classList.add('hidden');
+        fetchAllProducts(); // Cargar todos los productos para admin
       } else {
         alert('Contraseña incorrecta');
       }
@@ -351,6 +375,7 @@
     adminLogout.addEventListener('click', () => {
       isAdmin = false;
       updateVisibility();
+      fetchProducts(); // Volver a cargar los productos del día actual
     });
 
     // Agregar producto
@@ -359,7 +384,8 @@
       const description = newDescription.value.trim();
       const price = parseFloat(newPrice.value);
       const category = newCategory.value;
-      if (!name || !price || !category) {
+      const day = newDay.value;
+      if (!name || !price || !category || !day) {
         alert('Por favor, completa todos los campos.');
         return;
       }
@@ -367,7 +393,7 @@
         const response = await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, price, category })
+          body: JSON.stringify({ name, description, price, category, day })
         });
         const responseBody = await response.text();
         console.log('Respuesta del servidor:', responseBody);
@@ -381,6 +407,7 @@
           newDescription.value = '';
           newPrice.value = '';
           newCategory.value = '';
+          newDay.value = '';
           alert('Producto agregado con éxito');
         } else {
           alert('Error al agregar producto: ' + responseBody);
