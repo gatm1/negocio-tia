@@ -90,6 +90,9 @@
         <button id="send-order-btn" class="w-full bg-green-500 text-white p-2 rounded">Enviar por WhatsApp</button>
       </div>
     </div>
+    <div id="confirmation-message" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
+      Producto agregado con éxito a tu pedido.
+    </div>
     <button id="toggle-cart-btn" class="fixed bottom-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg">
       Carrito (0)
     </button>
@@ -102,7 +105,7 @@
     let cart = [];
     let isAdmin = false;
     const adminPassword = 'admin123'; // CAMBIA ESTA CONTRASEÑA
-    const whatsappNumber = '+521234567890'; // CAMBIA ESTE NÚMERO
+    const whatsappNumber = '+523318331309'; // CAMBIA ESTE NÚMERO
 
     // Elementos del DOM
     const app = document.getElementById('app');
@@ -144,6 +147,7 @@
     const customerDetails = document.getElementById('customer-details');
     const sendOrderBtn = document.getElementById('send-order-btn');
     const toggleCartBtn = document.getElementById('toggle-cart-btn');
+    const confirmationMessage = document.getElementById('confirmation-message');
 
     // Verificar si los pedidos están cerrados
     function checkClosed() {
@@ -196,6 +200,7 @@
       try {
         const res = await fetch('/api/products');
         products = await res.json();
+        console.log('Productos recibidos en fetchProducts:', products); // Añadir log para depuración
         // Convertir price a número
         products = products.map(product => ({
           ...product,
@@ -321,6 +326,14 @@
       window.scrollTo({ top: editForm.offsetTop, behavior: 'smooth' });
     }
 
+    // Mostrar mensaje de confirmación
+    function showConfirmationMessage() {
+      confirmationMessage.classList.remove('hidden');
+      setTimeout(() => {
+        confirmationMessage.classList.add('hidden');
+      }, 2000); // Ocultar después de 2 segundos
+    }
+
     // Agregar al carrito
     function addToCart(product) {
       const existing = cart.find(item => item.id === product.id);
@@ -331,6 +344,7 @@
         cart.push({ ...product, price, quantity: 1 });
       }
       renderCart();
+      showConfirmationMessage(); // Mostrar mensaje de confirmación
     }
 
     // Renderizar el carrito
